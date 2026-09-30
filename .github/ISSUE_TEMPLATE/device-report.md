@@ -26,3 +26,8 @@ labels: device-report
 - [ ] Unloading works and does not hang
 
 **Anything odd?**
+
+**Photos** (optional, e.g. of the zone test):
+
+**Credit:** may I thank you in the commit that confirms your model? If so, with which name or
+GitHub handle?

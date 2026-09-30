@@ -34,6 +34,9 @@ rewrite the rings several times per second stay cheap.
 | AYANEO 2, GEEK, GEEK 1S, AIR, AIR Pro, AIR 1S, AIR 1S Limited, AIR Plus (Mendocino), SuiPlay0X1 | same interface per ayaneo-platform; load with `untested=1` — **testers wanted**, see [TESTING.md](TESTING.md) |
 | KUN, AIR Plus AMD, Slide | not supported (different LED layout or EC interface) |
 
+Have one of the untested models? A test takes about 15 minutes, installs nothing and is undone by a
+reboot: see [TESTING.md](TESTING.md).
+
 ## Behaviour
 
 - Loading the driver does not touch the rings. The EC keeps its own animation

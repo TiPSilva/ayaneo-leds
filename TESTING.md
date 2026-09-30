@@ -1,4 +1,4 @@
-# Testing ayaneo-leds on your Ayaneo
+# Testing ayaneo-leds on your AYANEO
 
 Thanks for helping! Only the **AYANEO 2S** is confirmed so far. These models
 use the same EC interface according to
@@ -20,37 +20,95 @@ waiting for someone to test them:
 Not covered: the KUN, the AIR Plus AMD (`AB05-AMD`) and the Slide (`AS01`).
 Please don't force the driver onto them.
 
-Check yours with `cat /sys/class/dmi/id/board_name`.
+A test takes about 15 minutes. Each model confirmed by a report loads by itself
+for everyone from the next release on.
 
 ## What the test does (and doesn't)
 
 - The module is built and loaded **until the next reboot**. Nothing is
-  installed, and on immutable systems (Bazzite, SteamOS…) no layer is added.
+  installed, and on immutable systems (Bazzite, Fedora Atomic) no layer is
+  added.
 - It only writes the LED registers of the EC, and only when you set a colour.
   Unloading, suspending or rebooting hands the rings back to the EC.
 - Worst case on an unconfirmed model: the rings show the wrong thing or stay
   dark until the next power event (plugging or unplugging the charger).
 
-## Before you start
-
-- Kernel headers for the running kernel (`kernel-devel` on Fedora/Bazzite;
-  Bazzite ships them under `/usr/src/kernels`), `gcc` and `make`.
-- Nothing else controlling the rings: no `ayaneo-platform` module, and turn
-  off the LED control in HHD, AyaDecky or similar tools for the test.
-- **Secure Boot:** check with `mokutil --sb-state`. If it's enabled, see
-  [Secure Boot](#secure-boot) first.
-
-## Steps
+## 1. Get the code
 
 ```bash
 git clone https://github.com/TiPSilva/ayaneo-leds.git
 cd ayaneo-leds
+```
+
+Without git:
+
+```bash
+curl -L https://github.com/TiPSilva/ayaneo-leds/archive/refs/heads/main.tar.gz | tar xz
+cd ayaneo-leds-main
+```
+
+## 2. Check your model
+
+```bash
+bash scripts/collect-report.sh
+```
+
+Look at the `in the driver:` line:
+
+- `untested (load with untested=1)`: this guide is for you.
+- `confirmed`: your model already works; no test needed.
+- `not listed`: the driver doesn't know your board, so don't force it. Open a
+  [Device report](https://github.com/TiPSilva/ayaneo-leds/issues/new?template=device-report.md)
+  with that output anyway: the board strings show whether it's a known model
+  under another name.
+
+Also check that `kernel:` doesn't say "too old" (the driver needs 6.10 or
+later) and that `headers:` says `yes`.
+
+## 3. Before you start
+
+**Kernel headers**, `gcc` and `make` for the running kernel:
+
+| System | Command |
+|---|---|
+| Bazzite | already installed |
+| Fedora, Nobara | `sudo dnf install kernel-devel-$(uname -r) gcc make` |
+| Arch, CachyOS | `sudo pacman -S --needed base-devel` plus the headers of your kernel (`linux-headers`, `linux-zen-headers`, `linux-cachyos-headers`…) |
+| Debian, Ubuntu | `sudo apt install build-essential linux-headers-$(uname -r)` |
+| SteamOS, ChimeraOS | not covered by this guide (read-only system) |
+
+**Nothing else controlling the rings:** no `ayaneo-platform` module, and turn
+off the LED control in HHD, HueSync and AyaDecky for the test. HueSync's
+effects write the EC directly and would mix with the test. InputPlumber, the
+default on Bazzite, can stay on. The `services:` and `decky plugins:` lines of
+the report show what is running.
+
+**Secure Boot:** check with `mokutil --sb-state`. If it's enabled, see
+[Secure Boot](#secure-boot) first.
+
+## 4. Load the driver
+
+```bash
 bash scripts/test-transient.sh --untested
 ```
 
-Three LEDs should show up (`ayaneo:rgb:joystick_rings`,
-`ayaneo:rgb:joystick_ring_left` and `ayaneo:rgb:joystick_ring_right`), and the
-rings should **not** change yet.
+It asks for your password (sudo). Three LEDs should show up
+(`ayaneo:rgb:joystick_rings`, `ayaneo:rgb:joystick_ring_left` and
+`ayaneo:rgb:joystick_ring_right`), and the rings should **not** change yet.
+
+If it doesn't load:
+
+- **`No such device`**: the driver doesn't know this board. Check step 2.
+- **`Key was rejected by service`**: Secure Boot is on and the module isn't
+  signed with an enrolled key. See [Secure Boot](#secure-boot).
+- **`Invalid module format`, or the build fails**: the headers don't match the
+  running kernel. After a kernel update, reboot first; then reinstall the
+  headers.
+- **`ayaneo_platform is loaded`**: reboot without it.
+
+A report about a failure is just as useful: skip to step 6.
+
+## 5. Test
 
 ### Colours and brightness
 
@@ -80,7 +138,7 @@ echo "255 0 0 0 255 0 0 0 255 255 255 255" | sudo tee $LEFT/multi_intensity; ech
 
 On the AYANEO 2S the zones go clockwise from the right: red on the right,
 green at the bottom, blue on the left and white at the top, on both rings.
-Note where each colour shows up on yours.
+Note where each colour shows up on yours. A photo helps.
 
 ### Charger, suspend and handing back
 
@@ -97,15 +155,28 @@ echo 1 | sudo tee /sys/class/leds/ayaneo:rgb:joystick_rings/ec_control
 ```
 
 The EC's own animation should come back, possibly only after the next time you
-plug or unplug the charger. Finally:
+plug or unplug the charger.
+
+## 6. Unload and report
 
 ```bash
 bash scripts/test-transient.sh --unload
 bash scripts/collect-report.sh
 ```
 
-Open an issue with the **Device report** template and paste the output of
-`collect-report.sh`. Reports that something *doesn't* work are just as useful.
+Open a [Device report](https://github.com/TiPSilva/ayaneo-leds/issues/new?template=device-report.md),
+paste the output of `collect-report.sh` and tick what worked. Reports that
+something *doesn't* work are just as useful.
+
+## What happens next
+
+- **Everything worked:** the model moves to the confirmed list in the next
+  release and loads by itself from then on. You're credited in the commit
+  (`Tested-by:`) if you want; the report asks how.
+- **Something was off**, like one ring brighter than the other or the zones in
+  another order: I may ask you to test a build adjusted for your model.
+- **Nothing lit up, or something else reacted:** the model comes off the list.
+  That report helps just as much.
 
 ## Secure Boot
 
