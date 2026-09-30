@@ -1,0 +1,15 @@
+*.ko
+*.o
+*.mod
+*.mod.c
+*.cmd
+.*.cmd
+Module.symvers
+modules.order
+.tmp_versions/
+
+# Signing keys and local packages, in case a build runs from the repo
+*.priv
+*.der
+*.pem
+*.rpm
